@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor de Mapudungun Interactivo</title>
+    <!-- Carga de Tailwind CSS para el estilo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuración de la fuente Inter y estilos base de Tailwind */
+        body { font-family: 'Inter', sans-serif; background-color: #f7fbf8; }
+
+        /* Estilo para la tarjeta de flashcard */
+        .flashcard-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 200px;
+        }
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 1.5rem; /* rounded-3xl */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            font-size: 1.5rem;
+            text-align: center;
+        }
+        .flashcard-front {
+            background-color: #4CAF50; /* Un verde vibrante (kallfü) */
+            color: white;
+            border: 4px solid #388E3C;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .flashcard-back {
+            background-color: #f0fdf4; /* Verde claro */
+            color: #166534;
+            transform: rotateY(180deg);
+            border: 4px solid #166534;
+            /* Asegurar que el contenido interno sea legible */
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Estilo para arrastrar y soltar (Matching) */
+        .draggable {
+            cursor: grab;
+            transition: all 0.2s; /* Transición para los efectos visuales de drag */
+            z-index: 10;
+        }
+        .draggable:active {
+            cursor: grabbing;
+        }
+        .dropzone {
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        /* Clase para el elemento Mapudungun una vez que ha sido soltado */
+        .draggable-matched {
+            font-size: 1.125rem; /* text-lg, para que encaje bien */
+        }
+
+        /* Estilos para el Modal de Vocabulario */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50; /* Tailwind z-50 */
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 bg-gray-50 min-h-screen">
+
+    <div class="max-w-4xl mx-auto">
+        <div class="relative flex justify-center items-center mb-8">
+            <h1 class="text-4xl font-bold text-center text-green-700">Tutor Interactivo de Mapudungun</h1>
+            <!-- Botón de Acceso Rápido al Vocabulario (Libro) -->
+            <button id="btnOpenModal" class="absolute right-0 top-1/2 transform -translate-y-1/2 p-3 bg-green-500 text-white rounded-full shadow-lg hover:bg-green-600 transition duration-300 ml-4 hidden md:block">
+                <!-- Icono de libro/lista - Usando SVG inline -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm14.25-1.5a.75.75 0 0 0-.75.75v10.5a.75.75 0 0 0 .75.75h.25a.75.75 0 0 0 .75-.75V5.25a.75.75 0 0 0-.75-.75h-.25ZM6 6.75a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5a.75.75 0 0 1-.75-.75Zm.75 3a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Zm0 3a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Z" clip-rule="evenodd" />
+                </svg>
+            </button>
+            <button id="btnOpenModalMobile" class="absolute right-0 top-1/2 transform -translate-y-1/2 p-3 bg-green-500 text-white rounded-full shadow-lg hover:bg-green-600 transition duration-300 ml-4 md:hidden">
+                <!-- Icono de libro/lista - Usando SVG inline para móvil -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm14.25-1.5a.75.75 0 0 0-.75.75v10.5a.75.75 0 0 0 .75.75h.25a.75.75 0 0 0 .75-.75V5.25a.75.75 0 0 0-.75-.75h-.25ZM6 6.75a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5a.75.75 0 0 1-.75-.75Zm.75 3a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Zm0 3a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+        
+        <p class="text-center mb-6 text-gray-600">¡Marri marri! Selecciona una lección para comenzar la práctica.</p>
+
+        <!-- Selector de Lecciones -->
+        <div class="flex flex-col items-center mb-10">
+            <label for="lessonSelector" class="font-semibold text-gray-700 mb-2">Lección Activa:</label>
+            <select id="lessonSelector" class="p-3 border border-gray-300 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 w-full max-w-sm">
+                <option value="General">Saludos y Frases Generales</option>
+                <option value="Naturaleza">Naturaleza y Vida (Ñuke Mapu)</option>
+                <option value="Familia">Familia y Comunidad (Reñma)</option>
+                <option value="Cultura">Cultura y Sentimiento (Kimün)</option>
+            </select>
+        </div>
+        
+        <!-- Controles de Navegación del Módulo -->
+        <div class="flex justify-center flex-wrap gap-4 mb-10">
+            <button id="btnVocabulario" class="module-btn px-6 py-3 bg-green-600 text-white font-semibold rounded-full shadow-lg hover:bg-green-700 transition duration-300">
+                1. Vocabulario (Flashcards)
+            </button>
+            <button id="btnEmparejamiento" class="module-btn px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-full shadow-md hover:bg-gray-300 transition duration-300">
+                2. Emparejamiento
+            </button>
+            <button id="btnInterpretacion" class="module-btn px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-full shadow-md hover:bg-gray-300 transition duration-300">
+                3. Interpretación (Quiz)
+            </button>
+        </div>
+
+        <!-- Contenedor principal de módulos -->
+        <div id="moduleContainer" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl border-t-8 border-green-600">
+            <!-- El contenido del módulo activo se insertará aquí -->
+        </div>
+
+        <!-- Contenedor de Mensajes -->
+        <div id="messageBox" class="mt-8 p-4 rounded-xl text-center font-medium transition-all duration-500 opacity-0 transform translate-y-4"></div>
+
+    </div>
+
+    <!-- Modal de Vocabulario -->
+    <div id="vocabularyModal" class="modal hidden opacity-0" onclick="closeVocabularyModal(event)">
+        <div class="modal-content w-full md:max-w-2xl">
+            <button onclick="closeVocabularyModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold">
+                &times;
+            </button>
+            <h2 class="text-2xl font-bold text-green-700 border-b pb-2 mb-4">Vocabulario Completo</h2>
+            <p class="text-gray-600 mb-4 italic" id="modalLessonTitle"></p>
+            
+            <!-- Aquí se inyectan las listas -->
+            <div id="modalContentList" class="space-y-6">
+                <!-- Lista de Vocabulario Base -->
+                <div>
+                    <h3 class="text-xl font-semibold mb-2 text-green-600">Palabras y Frases Clave</h3>
+                    <ul id="baseVocabList" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        <!-- Contenido dinámico -->
+                    </ul>
+                </div>
+                
+                <!-- Lista de Frases Complejas -->
+                <div>
+                    <h3 class="text-xl font-semibold mb-2 mt-6 text-green-600">Frases Complejas (Interpretación)</h3>
+                    <ul id="complexQuizList" class="space-y-2 text-sm">
+                        <!-- Contenido dinámico -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DATOS DE LAS LECCIONES ---
+        const LESSONS = {
+            General: [
+                { mapudungun: "Marri marri", spanish: "Hola", hint: "El saludo más común.", pronunciation: "MAH-rree MAH-rree" },
+                { mapudungun: "Chaltu", spanish: "Gracias", hint: "Para agradecer.", pronunciation: "CHAHL-too" },
+                { mapudungun: "Pewkayal", spanish: "Adiós", hint: "Para despedirse.", pronunciation: "peh-oo-KAH-yahl" },
+                { mapudungun: "Küme dungu muley", spanish: "Todo está bien", hint: "La respuesta a '¿Qué noticias hay?'", pronunciation: "KOO-meh DOON-goo moo-ley" },
+                { mapudungun: "Inche pingelen", spanish: "Yo me llamo", hint: "Para presentarte (ej. Inche Nate pingelen).", pronunciation: "EEN-che peen-GEH-lehn" },
+                { mapudungun: "Ruka", spanish: "Casa", hint: "Donde vives.", pronunciation: "ROO-kah" },
+            ],
+            Naturaleza: [
+                { mapudungun: "Mapu", spanish: "Tierra / Territorio", hint: "El territorio sagrado, la base de todo.", pronunciation: "MAH-poo" },
+                { mapudungun: "Ko", spanish: "Agua", hint: "Elemento vital y sagrado.", pronunciation: "koh" },
+                { mapudungun: "Kürüf", spanish: "Viento", hint: "Lo que sientes en un día frío.", pronunciation: "koo-ROO-f" },
+                { mapudungun: "Lafken", spanish: "Mar / Lago", hint: "Cuerpo de agua grande.", pronunciation: "lahf-KEHN" },
+                { mapudungun: "Ñuke Mapu", spanish: "Madre Tierra", hint: "La Pachamama mapuche (Ñuke=madre).", pronunciation: "ÑOO-keh MAH-poo" },
+                { mapudungun: "Küzaw", spanish: "Trabajo / Esfuerzo", hint: "Se aplica al trabajo de la tierra o del espíritu.", pronunciation: "koo-ZAH-oo" },
+                { mapudungun: "Püllü", spanish: "Alma / Espíritu", hint: "La esencia de las personas y el territorio.", pronunciation: "poo-YOO" },
+                { mapudungun: "Mawida", spanish: "Montaña / Cerro", hint: "Lugares de gran poder espiritual.", pronunciation: "mah-WEE-dah" },
+                { mapudungun: "Chao", spanish: "Sol / Padre", hint: "El gran astro, a veces usado para referirse a Dios.", pronunciation: "CHAH-oo" },
+                { mapudungun: "Aliwen", spanish: "Árbol / Madera", hint: "Esencial en el bosque y la construcción.", pronunciation: "ah-LEE-wen" },
+                { mapudungun: "Ngen", spanish: "Dueño/Espíritu", hint: "Guardianes de la naturaleza (ej. Ngen-ko, espíritu del agua).", pronunciation: "ngehn" },
+                { mapudungun: "Rayen", spanish: "Flor", hint: "Se usa a menudo como nombre personal.", pronunciation: "RAH-yehn" },
+            ],
+            Familia: [
+                { mapudungun: "Ñuke", spanish: "Madre", hint: "La mamá.", pronunciation: "ÑOO-keh" },
+                { mapudungun: "Chaw", spanish: "Padre", hint: "El papá.", pronunciation: "CHAH-oo" },
+                { mapudungun: "Lamngen", spanish: "Hermano/a (general)", hint: "Hermano o hermana de la misma persona.", pronunciation: "lahm-ngehn" },
+                { mapudungun: "Peñi", spanish: "Hermano (hombre a hombre)", hint: "Usado por un hombre para llamar a su hermano.", pronunciation: "peh-ñee" },
+                { mapudungun: "Kuku", spanish: "Abuelo (paterno)", hint: "Abuelo por parte de padre.", pronunciation: "KOO-koo" },
+                { mapudungun: "Chuchu", spanish: "Abuela (materna)", hint: "Abuela por parte de madre.", pronunciation: "CHOO-choo" },
+            ],
+            Cultura: [
+                { mapudungun: "Dungu", spanish: "Palabra / Asunto", hint: "Significa tanto 'palabra' como 'noticia' o 'cosa'.", pronunciation: "DOON-goo" },
+                { mapudungun: "Kimün", spanish: "Conocimiento / Sabiduría", hint: "El saber ancestral y cultural.", pronunciation: "kee-MOON" },
+                { mapudungun: "Ngillatun", spanish: "Rogativa / Ceremonia", hint: "La ceremonia principal de agradecimiento.", pronunciation: "ngee-yah-TOO-n" },
+                { mapudungun: "Machi", spanish: "Curandero/a", hint: "Autoridad espiritual y médica.", pronunciation: "MAH-chee" },
+                { mapudungun: "We Tripantu", spanish: "Año Nuevo Mapuche", hint: "El retorno del solsticio de invierno.", pronunciation: "weh tree-PAHN-too" },
+                { mapudungun: "Ayüwün", spanish: "Alegría / Felicidad", hint: "El sentimiento de estar contento.", pronunciation: "ah-yoo-WEEN" },
+            ]
+        };
+        
+        // --- FRASES COMPLEJAS PARA EL QUIZ (Módulo 3) ---
+        // Estas frases complementan el vocabulario por lección.
+        const COMPLEX_QUIZ = {
+            General: [
+                { mapudungun: "¿Chem dungu muley?", spanish: "¿Qué noticias hay?", options: ["¿Cómo te llamas?", "¿A dónde vas?"] },
+                { mapudungun: "Ruka mew amun.", spanish: "Voy a casa.", options: ["Estoy en la casa.", "Quiero una casa."] },
+            ],
+            Naturaleza: [
+                { mapudungun: "Kallfü mawün pürüm pürüm.", spanish: "La lluvia azul cae suavemente.", options: ["El viento sopla fuerte.", "El sol está brillando."] },
+                { mapudungun: "Ni Kallfü ruka mu choyvn.", spanish: "Nací en mi casa azul.", options: ["Vivo en la casa azul.", "Mi casa es azul."] },
+                { mapudungun: "Ñuke Mapu tukun wül püllü.", spanish: "La Madre Tierra nos da espíritu.", options: ["El trabajo está en la tierra.", "Amamos a la Madre Tierra."] },
+            ],
+            Familia: [
+                { mapudungun: "Ayiwün-küley ñi mülen.", spanish: "Están felices de estar aquí.", options: ["Mi familia es grande.", "Quiero a mi madre."] },
+            ],
+            Cultura: [
+                { mapudungun: "¿Chem tami nütram?", spanish: "¿Qué conversas? / ¿De qué hablas?", options: ["¿Qué es el Ngillatun?", "¿Sabes la historia?"] },
+                { mapudungun: "Chem dungu muley tami küzaw mu.", spanish: "¿Qué asuntos hay en tu trabajo?", options: ["Me gusta mi trabajo.", "El trabajo es sabiduría."] },
+            ]
+        };
+
+        // --- Variables DOM Globales (se asignarán en window.onload) ---
+        let lessonSelector;
+        let moduleContainer;
+        let messageBox;
+        let vocabularyModal;
+        let moduleButtons;
+        
+        // --- Variables de Estado Global ---
+        let currentModule = 'Vocabulario';
+        let activeVocabulary = [];
+        let currentFlashcardIndex = 0;
+        let currentQuizIndex = 0;
+        let currentQuizSet = [];
+        let score = 0;
+        let questionsAnswered = 0;
+        let draggedElement = null; // Para el módulo de emparejamiento
+
+
+        /** Obtiene un subconjunto aleatorio de un array. */
+        const getRandomSubset = (arr, size) => {
+            const shuffled = [...arr].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, size);
+        };
+
+        /** Muestra un mensaje temporal en la parte inferior. */
+        const showMessage = (message, type = 'success') => {
+            messageBox.textContent = message;
+            if (type === 'success') {
+                messageBox.className = 'mt-8 p-4 rounded-xl text-center font-medium transition-all duration-500 opacity-100 transform translate-y-0 bg-green-100 text-green-800';
+            } else if (type === 'error') {
+                messageBox.className = 'mt-8 p-4 rounded-xl text-center font-medium transition-all duration-500 opacity-100 transform translate-y-0 bg-red-100 text-red-800';
+            } else {
+                messageBox.className = 'mt-8 p-4 rounded-xl text-center font-medium transition-all duration-500 opacity-100 transform translate-y-0 bg-blue-100 text-blue-800';
+            }
+
+            setTimeout(() => {
+                messageBox.className = 'mt-8 p-4 rounded-xl text-center font-medium transition-all duration-500 opacity-0 transform translate-y-4';
+            }, 3000);
+        };
+
+        /** Cambia la lección activa y recarga el módulo actual. */
+        const changeLesson = () => {
+            const selectedLesson = lessonSelector.value;
+            activeVocabulary = LESSONS[selectedLesson];
+            // Recargar el módulo actual con el nuevo vocabulario
+            if(currentModule === 'Vocabulario') currentFlashcardIndex = 0;
+            if(currentModule === 'Interpretación') currentQuizIndex = 0;
+            renderModule(currentModule);
+        };
+
+        /** Renderiza el módulo seleccionado. */
+        const renderModule = (moduleName) => {
+            currentModule = moduleName;
+            
+            // Actualizar estilo de botones
+            moduleButtons.forEach(btn => {
+                // Extraer el nombre base del botón (ej. "Vocabulario")
+                const btnName = btn.textContent.split(' ').slice(1).join(' ').replace('(Flashcards)', '').trim();
+                const isActive = btnName === moduleName;
+                
+                btn.classList.toggle('bg-green-600', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('bg-gray-200', !isActive);
+                btn.classList.toggle('text-gray-700', !isActive);
+            });
+
+            // Cargar el contenido del módulo
+            switch (moduleName) {
+                case 'Vocabulario':
+                    renderVocabularioModule();
+                    break;
+                case 'Emparejamiento':
+                    renderEmparejamientoModule();
+                    break;
+                case 'Interpretación':
+                    renderInterpretacionModule();
+                    break;
+                default:
+                    renderVocabularioModule();
+            }
+        };
+
+        // --- MÓDULO 1: Vocabulario (Flashcards) ---
+
+        const renderVocabularioModule = () => {
+            moduleContainer.innerHTML = `
+                <h2 class="text-2xl font-semibold mb-6 text-center text-green-800">1. Vocabulario (Flashcards)</h2>
+                <p class="text-center mb-6 text-gray-600">Haz clic en la tarjeta para voltearla. Usa los botones para navegar.</p>
+                <div class="flashcard-container mb-6">
+                    <div id="flashcard" class="flashcard">
+                        <div class="flashcard-face flashcard-front"></div>
+                        <div class="flashcard-face flashcard-back"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <button id="prevCard" class="px-5 py-2 bg-gray-300 text-gray-700 rounded-full hover:bg-gray-400 transition">&larr; Anterior</button>
+                    <span id="cardCounter" class="text-gray-500 text-sm"></span>
+                    <button id="nextCard" class="px-5 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition">Siguiente &rarr;</button>
+                </div>
+            `;
+            
+            updateFlashcard();
+
+            document.getElementById('flashcard').addEventListener('click', () => {
+                document.getElementById('flashcard').classList.toggle('flipped');
+            });
+            document.getElementById('prevCard').addEventListener('click', prevFlashcard);
+            document.getElementById('nextCard').addEventListener('click', nextFlashcard);
+        };
+
+        const updateFlashcard = () => {
+            const card = activeVocabulary[currentFlashcardIndex];
+            document.querySelector('.flashcard-front').innerHTML = `
+                <div>
+                    <div>${card.mapudungun}</div>
+                    <div class="text-sm font-normal text-green-100 italic mt-2">(${card.pronunciation})</div>
+                </div>
+            `;
+            document.querySelector('.flashcard-back').innerHTML = `
+                <div class="font-bold text-2xl">${card.spanish}</div>
+                <div class="text-base text-green-700 italic mt-2">${card.hint}</div>
+            `;
+            document.getElementById('cardCounter').textContent = `${currentFlashcardIndex + 1} / ${activeVocabulary.length}`;
+            
+            // Deshabilitar botones en los extremos
+            document.getElementById('prevCard').disabled = currentFlashcardIndex === 0;
+            document.getElementById('prevCard').classList.toggle('opacity-50', currentFlashcardIndex === 0);
+            document.getElementById('nextCard').disabled = currentFlashcardIndex === activeVocabulary.length - 1;
+            document.getElementById('nextCard').classList.toggle('opacity-50', currentFlashcardIndex === activeVocabulary.length - 1);
+        };
+
+        const nextFlashcard = () => {
+            if (currentFlashcardIndex < activeVocabulary.length - 1) {
+                currentFlashcardIndex++;
+                updateFlashcard();
+                document.getElementById('flashcard').classList.remove('flipped');
+            }
+        };
+
+        const prevFlashcard = () => {
+            if (currentFlashcardIndex > 0) {
+                currentFlashcardIndex--;
+                updateFlashcard();
+                document.getElementById('flashcard').classList.remove('flipped');
+            }
+        };
+
+
+        // --- MÓDULO 2: Emparejamiento ---
+
+        const renderEmparejamientoModule = () => {
+            // Usar un subconjunto de 5 para el juego
+            const gameSet = getRandomSubset(activeVocabulary, 5);
+            if (gameSet.length < 2) {
+                moduleContainer.innerHTML = `<p class="text-center text-gray-600">No hay suficiente vocabulario en esta lección para el juego de emparejamiento.</p>`;
+                return;
+            }
+
+            const spanishSet = [...gameSet].sort(() => 0.5 - Math.random()); // Desordenar el set español
+
+            moduleContainer.innerHTML = `
+                <h2 class="text-2xl font-semibold mb-6 text-center text-green-800">2. Emparejamiento</h2>
+                <p class="text-center mb-8 text-gray-600">Arrastra la palabra en Mapudungun a su traducción correcta en español.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    <!-- Columna de Mapudungun (Arrastrables) -->
+                    <div class="space-y-4" id="mapudungun-list">
+                        ${gameSet.map(item => `
+                            <div class="draggable bg-green-100 border-2 border-green-300 p-4 rounded-xl text-lg font-bold text-green-800 text-center shadow-md" 
+                                 draggable="true" 
+                                 data-mapudungun="${item.mapudungun}">
+                                ${item.mapudungun}
+                                <div class="text-sm font-normal text-green-600 italic">(${item.pronunciation})</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <!-- Columna de Español (Zonas de soltar) -->
+                    <div class="space-y-4" id="spanish-list">
+                        ${spanishSet.map(item => `
+                            <div class="dropzone bg-gray-100 border-2 border-dashed border-gray-400 p-4 rounded-xl min-h-[100px] flex justify-center items-center" 
+                                 data-spanish="${item.spanish}">
+                                <span class="text-lg font-semibold text-gray-700">${item.spanish}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="text-center mt-10">
+                    <button id="checkMatchesBtn" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition duration-300 transform hover:scale-105">
+                        Comprobar Respuestas
+                    </button>
+                </div>
+            `;
+            
+            addDragAndDropListeners();
+            document.getElementById('checkMatchesBtn').addEventListener('click', checkMatches);
+        };
+
+        const addDragAndDropListeners = () => {
+            const draggables = document.querySelectorAll('.draggable');
+            const dropzones = document.querySelectorAll('.dropzone');
+
+            draggables.forEach(draggable => {
+                draggable.addEventListener('dragstart', (e) => {
+                    draggedElement = e.target.closest('.draggable');
+                    draggedElement.classList.add('opacity-50');
+                    e.dataTransfer.setData('text/plain', draggedElement.dataset.mapudungun);
+                });
+
+                draggable.addEventListener('dragend', () => {
+                    if (draggedElement) {
+                        draggedElement.classList.remove('opacity-50');
+                    }
+                    draggedElement = null;
+                });
+            });
+
+            dropzones.forEach(zone => {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.classList.add('bg-blue-100', 'border-blue-400');
+                });
+
+                zone.addEventListener('dragleave', () => {
+                    zone.classList.remove('bg-blue-100', 'border-blue-400');
+                });
+
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('bg-blue-100', 'border-blue-400');
+
+                    if (draggedElement) {
+                        // Si la zona ya tiene un elemento, devolverlo a la lista
+                        const existingDraggable = zone.querySelector('.draggable');
+                        if (existingDraggable) {
+                            document.getElementById('mapudungun-list').appendChild(existingDraggable);
+                        }
+                        
+                        // Añadir el nuevo elemento
+                        zone.appendChild(draggedElement);
+                        draggedElement.classList.add('draggable-matched');
+                        draggedElement = null;
+                    }
+                });
+            });
+
+            // Permitir soltar de nuevo en la lista principal
+            const mapuList = document.getElementById('mapudungun-list');
+            mapuList.addEventListener('dragover', e => e.preventDefault());
+            mapuList.addEventListener('drop', e => {
+                e.preventDefault();
+                if (draggedElement) {
+                    mapuList.appendChild(draggedElement);
+                    draggedElement.classList.remove('draggable-matched');
+                }
+            });
+        };
+        
+        const checkMatches = () => {
+            let correctCount = 0;
+            const dropzones = document.querySelectorAll('.dropzone');
+            
+            dropzones.forEach(zone => {
+                const spanishWord = zone.dataset.spanish;
+                const droppedElement = zone.querySelector('.draggable');
+                
+                // Limpiar estilos previos
+                zone.classList.remove('bg-green-100', 'border-green-500', 'bg-red-100', 'border-red-500');
+
+                if (droppedElement) {
+                    const mapudungunWord = droppedElement.dataset.mapudungun;
+                    // Buscar la traducción correcta en el vocabulario activo
+                    const correctItem = activeVocabulary.find(item => item.mapudungun === mapudungunWord);
+                    
+                    if (correctItem && correctItem.spanish === spanishWord) {
+                        zone.classList.add('bg-green-100', 'border-green-500', 'border-solid');
+                        correctCount++;
+                    } else {
+                        zone.classList.add('bg-red-100', 'border-red-500', 'border-solid');
+                    }
+                } else {
+                    // Marcar zonas vacías como incorrectas si se espera una respuesta
+                    zone.classList.add('bg-red-100', 'border-red-500', 'border-solid');
+                }
+            });
+
+            if (correctCount === dropzones.length) {
+                showMessage('¡Pewkayal! ¡Todas las respuestas son correctas!', 'success');
+                // Recargar el juego
+                setTimeout(renderEmparejamientoModule, 3000);
+            } else {
+                showMessage(`Tienes ${correctCount} de ${dropzones.length} correctas. ¡Sigue intentando!`, 'error');
+            }
+        };
+
+        // --- MÓDULO 3: Interpretación (Quiz) ---
+
+        const renderInterpretacionModule = () => {
+            const lessonQuizSet = COMPLEX_QUIZ[lessonSelector.value] || [];
+            if (lessonQuizSet.length === 0) {
+                 moduleContainer.innerHTML = `<p class="text-center text-gray-600">No hay preguntas de interpretación para esta lección todavía.</p>`;
+                return;
+            }
+            
+            // Mezclar el set de quiz para esta sesión
+            currentQuizSet = getRandomSubset(lessonQuizSet, lessonQuizSet.length);
+            currentQuizIndex = 0;
+            score = 0;
+            questionsAnswered = 0;
+            
+            moduleContainer.innerHTML = `
+                <h2 class="text-2xl font-semibold mb-6 text-center text-green-800">3. Interpretación (Quiz)</h2>
+                <p class="text-center mb-6 text-gray-600">Lee la frase en Mapudungun y elige la traducción correcta.</p>
+                <div id="quizContainer">
+                    <!-- La pregunta del quiz se insertará aquí -->
+                </div>
+                <div id="quizScore" class="text-center font-bold text-lg text-gray-700 mt-6 hidden"></div>
+                <div class="text-center mt-6">
+                    <button id="nextQuizBtn" class="px-8 py-3 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 transition duration-300 hidden">
+                        Siguiente Pregunta
+                    </button>
+                    <button id="restartQuizBtn" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition duration-300 hidden">
+                        Reiniciar Lección
+                    </button>
+                </div>
+            `;
+            
+            loadQuizQuestion();
+            document.getElementById('nextQuizBtn').addEventListener('click', nextQuizQuestion);
+            document.getElementById('restartQuizBtn').addEventListener('click', renderInterpretacionModule);
+        };
+
+        const loadQuizQuestion = () => {
+            const quizContainer = document.getElementById('quizContainer');
+            const nextBtn = document.getElementById('nextQuizBtn');
+            const scoreDisplay = document.getElementById('quizScore');
+
+            // Ocultar botón de siguiente
+            nextBtn.classList.add('hidden');
+            
+            if (currentQuizIndex >= currentQuizSet.length) {
+                // Fin del quiz
+                quizContainer.innerHTML = `
+                    <h3 class="text-xl font-bold text-center text-blue-700">¡Lección completada!</h3>
+                    <p class="text-center text-gray-700 mt-4">Tu puntuación final es:</p>
+                    <p class="text-center text-5xl font-extrabold text-green-600 my-4">${score} / ${currentQuizSet.length}</p>
+                `;
+                scoreDisplay.classList.add('hidden');
+                document.getElementById('restartQuizBtn').classList.remove('hidden');
+                return;
+            }
+
+            const question = currentQuizSet[currentQuizIndex];
+            // Crear opciones: la correcta + las incorrectas
+            const options = getRandomSubset([question.spanish, ...question.options], 3);
+
+            quizContainer.innerHTML = `
+                <div class="bg-gray-100 p-6 rounded-xl shadow-inner">
+                    <p class="text-sm text-gray-500 mb-2 text-center">Interpreta esta frase:</p>
+                    <h3 class="text-2xl font-bold text-center text-green-700 mb-6">${question.mapudungun}</h3>
+                </div>
+                <div id="quizOptions" class="grid grid-cols-1 gap-4 mt-6">
+                    ${options.map(option => `
+                        <button class="quiz-option p-4 bg-white border-2 border-gray-300 rounded-lg text-lg text-gray-700 font-medium text-left hover:bg-gray-50 hover:border-blue-400 transition">
+                            ${option}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+
+            // Actualizar puntuación
+            scoreDisplay.textContent = `Puntuación: ${score} / ${questionsAnswered}`;
+            scoreDisplay.classList.remove('hidden');
+
+            document.querySelectorAll('.quiz-option').forEach(button => {
+                button.addEventListener('click', (e) => checkQuizAnswer(e, question));
+            });
+        };
+
+        const checkQuizAnswer = (e, question) => {
+            const selectedOption = e.target.textContent.trim();
+            const correctOption = question.spanish;
+            const buttons = document.querySelectorAll('.quiz-option');
+            questionsAnswered++;
+
+            buttons.forEach(button => {
+                button.disabled = true; // Deshabilitar botones
+                const optionText = button.textContent.trim();
+                
+                if (optionText === correctOption) {
+                    // Marcar la correcta
+                    button.classList.remove('border-gray-300', 'hover:bg-gray-50', 'hover:border-blue-400');
+                    button.classList.add('bg-green-100', 'border-green-500', 'border-2', 'font-bold');
+                }
+                
+                if (optionText === selectedOption && optionText !== correctOption) {
+                    // Marcar la incorrecta seleccionada
+                    button.classList.remove('border-gray-300', 'hover:bg-gray-50', 'hover:border-blue-400');
+                    button.classList.add('bg-red-100', 'border-red-500', 'border-2');
+                }
+            });
+
+            if (selectedOption === correctOption) {
+                score++;
+                showMessage('¡Küme! (¡Bien!)', 'success');
+            } else {
+                showMessage(`Incorrecto. La respuesta era: "${correctOption}"`, 'error');
+            }
+
+            // Actualizar puntuación y mostrar botón de siguiente
+            document.getElementById('quizScore').textContent = `Puntuación: ${score} / ${questionsAnswered}`;
+            document.getElementById('nextQuizBtn').classList.remove('hidden');
+        };
+
+        const nextQuizQuestion = () => {
+            currentQuizIndex++;
+            loadQuizQuestion();
+        };
+
+        // --- LÓGICA DEL MODAL DE VOCABULARIO ---
+
+        /** Abre el modal, populando las listas con la lección activa. */
+        window.showVocabularyModal = () => {
+            const selectedLessonKey = lessonSelector.value;
+            const lessonName = lessonSelector.options[lessonSelector.selectedIndex].textContent;
+            
+            const baseVocab = LESSONS[selectedLessonKey];
+            const complexQuiz = COMPLEX_QUIZ[selectedLessonKey] || [];
+
+            // 1. Actualizar título del modal
+            document.getElementById('modalLessonTitle').textContent = `Lección: ${lessonName}`;
+
+            // 2. Poblar la lista de vocabulario base
+            const baseVocabList = document.getElementById('baseVocabList');
+            baseVocabList.innerHTML = baseVocab.map(item => `
+                <li class="flex justify-between items-start border-b border-gray-100 py-1">
+                    <span class="font-bold text-green-800">${item.mapudungun}</span>
+                    <span class="text-gray-600 text-right ml-4">${item.spanish} <span class="italic text-xs text-gray-400">(${item.pronunciation})</span></span>
+                </li>
+            `).join('');
+
+            // 3. Poblar la lista de frases complejas
+            const complexQuizList = document.getElementById('complexQuizList');
+            if (complexQuiz.length > 0) {
+                complexQuizList.innerHTML = complexQuiz.map(item => `
+                    <li class="p-2 border-b border-gray-200">
+                        <p class="font-medium text-gray-700">${item.mapudungun}</p>
+                        <p class="text-sm italic text-gray-500">- ${item.spanish}</p>
+                    </li>
+                `).join('');
+                document.getElementById('modalContentList').querySelector('div:last-child').classList.remove('hidden');
+            } else {
+                 document.getElementById('modalContentList').querySelector('div:last-child').classList.add('hidden');
+            }
+
+
+            // 4. Mostrar el modal
+            vocabularyModal.classList.remove('hidden');
+            setTimeout(() => {
+                vocabularyModal.classList.remove('opacity-0');
+            }, 10);
+        };
+
+        /** Cierra el modal, opcionalmente verificando si el clic fue fuera del contenido. */
+        window.closeVocabularyModal = (event) => {
+            // Cierra si se llama directamente (botón) o si el clic es en el fondo (event.target === modal)
+            if (!event || event.target === vocabularyModal) {
+                vocabularyModal.classList.add('opacity-0');
+                setTimeout(() => {
+                    vocabularyModal.classList.add('hidden');
+                }, 300);
+            }
+        };
+
+
+        // --- Inicialización ---
+
+        window.onload = () => {
+            // --- Asignar Elementos DOM Clave ---
+            lessonSelector = document.getElementById('lessonSelector');
+            moduleContainer = document.getElementById('moduleContainer');
+            messageBox = document.getElementById('messageBox');
+            vocabularyModal = document.getElementById('vocabularyModal');
+            moduleButtons = document.querySelectorAll('.module-btn');
+
+            // Asignar evento al selector de lecciones
+            lessonSelector.addEventListener('change', changeLesson);
+
+            // Conexión de los botones de navegación de módulo
+            document.getElementById('btnVocabulario').addEventListener('click', () => renderModule('Vocabulario'));
+            document.getElementById('btnEmparejamiento').addEventListener('click', () => renderModule('Emparejamiento'));
+            document.getElementById('btnInterpretacion').addEventListener('click', () => renderModule('Interpretación'));
+
+            // Conexión del botón del modal
+            document.getElementById('btnOpenModal').addEventListener('click', window.showVocabularyModal);
+            document.getElementById('btnOpenModalMobile').addEventListener('click', window.showVocabularyModal);
+
+            // Iniciar con el primer módulo al cargar la página
+            // Cargar datos de la lección inicial ANTES de renderizar
+            changeLesson();
+            renderModule('Vocabulario');
+        };
+
+    </script>
+</body>
+</html>
