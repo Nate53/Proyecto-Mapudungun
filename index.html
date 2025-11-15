@@ -162,11 +162,11 @@
 
     <!-- Modal de Vocabulario -->
     <div id="vocabularyModal" class="modal hidden opacity-0" onclick="closeVocabularyModal(event)">
-        <div class="modal-content w-full md:max-w-2xl">
+        <div class="modal-content w-full md:max-w-3xl">
             <button onclick="closeVocabularyModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold">
                 &times;
             </button>
-            <h2 class="text-2xl font-bold text-green-700 border-b pb-2 mb-4">Vocabulario Completo</h2>
+            <h2 class="text-2xl font-bold text-green-700 border-b pb-2 mb-4">Vocabulario Global</h2>
             <p class="text-gray-600 mb-4 italic" id="modalLessonTitle"></p>
             
             <!-- Aquí se inyectan las listas -->
@@ -178,7 +178,7 @@
                         <!-- Contenido dinámico -->
                     </ul>
                 </div>
-                
+
                 <!-- Lista de Frases Complejas -->
                 <div>
                     <h3 class="text-xl font-semibold mb-2 mt-6 text-green-600">Frases Complejas (Interpretación)</h3>
@@ -186,12 +186,41 @@
                         <!-- Contenido dinámico -->
                     </ul>
                 </div>
+
+                <!-- Lista de Pronombres -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-4 text-green-600">Gramática Esencial (Pronombres)</h3>
+                    <div id="pronounTableContainer" class="overflow-x-auto">
+                        <!-- Tabla de Pronombres se insertará aquí -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
 
     <script>
+        // --- PRONOMBRES (Para el Modal de Referencia y Módulos de Práctica) ---
+        const PRONOUNS = [
+            { person: "1ª (Yo, Nosotros)", singular: "Iñche (yo)", dual: "Iñchiw (nosotros dos)", plural: "Iñchiñ (nosotros todos)" },
+            { person: "2ª (Tú, Ustedes)", singular: "Eymi (tú)", dual: "Eymu (ustedes dos)", plural: "Eymün (ustedes todos)" },
+            { person: "3ª (Él/Ella, Ellos)", singular: "Fey (él / ella)", dual: "Feyengu (ellos dos)", plural: "Feyengün (ellos todos)" },
+        ];
+        
+        // Versión plana de los pronombres para mezclar con el vocabulario de la lección
+        const PRONOUN_VOCAB = [
+            { mapudungun: "Iñche", spanish: "yo", hint: "Pronombre: 1ª singular", pronunciation: "een-CHEE" },
+            { mapudungun: "Iñchiw", spanish: "nosotros dos", hint: "Pronombre: 1ª dual (¡único en Mapudungun!)", pronunciation: "een-CHEEW" },
+            { mapudungun: "Iñchiñ", spanish: "nosotros (plural)", hint: "Pronombre: 1ª plural", pronunciation: "een-CHEEÑ" },
+            { mapudungun: "Eymi", spanish: "tú", hint: "Pronombre: 2ª singular", pronunciation: "ey-mee" },
+            { mapudungun: "Eymu", spanish: "ustedes dos", hint: "Pronombre: 2ª dual", pronunciation: "ey-moo" },
+            { mapudungun: "Eymün", spanish: "ustedes (plural)", hint: "Pronombre: 2ª plural", pronunciation: "ey-moon" },
+            { mapudungun: "Fey", spanish: "él / ella", hint: "Pronombre: 3ª singular", pronunciation: "feh-ee" },
+            { mapudungun: "Feyengu", spanish: "ellos dos", hint: "Pronombre: 3ª dual", pronunciation: "feh-yeh-n-goo" },
+            { mapudungun: "Feyengün", spanish: "ellos (plural)", hint: "Pronombre: 3ª plural", pronunciation: "feh-yeh-n-goon" },
+        ];
+
+
         // --- DATOS DE LAS LECCIONES ---
         const LESSONS = {
             General: [
@@ -216,6 +245,7 @@
                 { mapudungun: "Ngen", spanish: "Dueño/Espíritu", hint: "Guardianes de la naturaleza (ej. Ngen-ko, espíritu del agua).", pronunciation: "ngehn" },
                 { mapudungun: "Rayen", spanish: "Flor", hint: "Se usa a menudo como nombre personal.", pronunciation: "RAH-yehn" },
             ],
+            // PRONOMBRES AÑADIDOS AQUÍ
             Familia: [
                 { mapudungun: "Ñuke", spanish: "Madre", hint: "La mamá.", pronunciation: "ÑOO-keh" },
                 { mapudungun: "Chaw", spanish: "Padre", hint: "El papá.", pronunciation: "CHAH-oo" },
@@ -223,7 +253,9 @@
                 { mapudungun: "Peñi", spanish: "Hermano (hombre a hombre)", hint: "Usado por un hombre para llamar a su hermano.", pronunciation: "peh-ñee" },
                 { mapudungun: "Kuku", spanish: "Abuelo (paterno)", hint: "Abuelo por parte de padre.", pronunciation: "KOO-koo" },
                 { mapudungun: "Chuchu", spanish: "Abuela (materna)", hint: "Abuela por parte de madre.", pronunciation: "CHOO-choo" },
-            ],
+            ].concat(PRONOUN_VOCAB), // <<< FUSIÓN DE PRONOMBRES
+            
+            // PRONOMBRES AÑADIDOS AQUÍ
             Cultura: [
                 { mapudungun: "Dungu", spanish: "Palabra / Asunto", hint: "Significa tanto 'palabra' como 'noticia' o 'cosa'.", pronunciation: "DOON-goo" },
                 { mapudungun: "Kimün", spanish: "Conocimiento / Sabiduría", hint: "El saber ancestral y cultural.", pronunciation: "kee-MOON" },
@@ -231,7 +263,7 @@
                 { mapudungun: "Machi", spanish: "Curandero/a", hint: "Autoridad espiritual y médica.", pronunciation: "MAH-chee" },
                 { mapudungun: "We Tripantu", spanish: "Año Nuevo Mapuche", hint: "El retorno del solsticio de invierno.", pronunciation: "weh tree-PAHN-too" },
                 { mapudungun: "Ayüwün", spanish: "Alegría / Felicidad", hint: "El sentimiento de estar contento.", pronunciation: "ah-yoo-WEEN" },
-            ]
+            ].concat(PRONOUN_VOCAB) // <<< FUSIÓN DE PRONOMBRES
         };
         
         // --- FRASES COMPLEJAS PARA EL QUIZ (Módulo 3) ---
@@ -254,6 +286,7 @@
                 { mapudungun: "Chem dungu muley tami küzaw mu.", spanish: "¿Qué asuntos hay en tu trabajo?", options: ["Me gusta mi trabajo.", "El trabajo es sabiduría."] },
             ]
         };
+
 
         // --- Variables DOM Globales (se asignarán en window.onload) ---
         let lessonSelector;
@@ -366,10 +399,20 @@
         };
 
         const updateFlashcard = () => {
+            if (activeVocabulary.length === 0) {
+                 document.querySelector('.flashcard-front').innerHTML = '<div class="text-2xl">¡Lección vacía!</div>';
+                 document.querySelector('.flashcard-back').innerHTML = '<div class="text-2xl">Selecciona otra lección.</div>';
+                 document.getElementById('cardCounter').textContent = '0 / 0';
+                 document.getElementById('prevCard').disabled = true;
+                 document.getElementById('nextCard').disabled = true;
+                 return;
+            }
+
             const card = activeVocabulary[currentFlashcardIndex];
+            document.getElementById('flashcard').classList.remove('flipped'); // Asegurar que esté al frente al cargar
             document.querySelector('.flashcard-front').innerHTML = `
                 <div>
-                    <div>${card.mapudungun}</div>
+                    <div class="font-bold">${card.mapudungun}</div>
                     <div class="text-sm font-normal text-green-100 italic mt-2">(${card.pronunciation})</div>
                 </div>
             `;
@@ -390,7 +433,6 @@
             if (currentFlashcardIndex < activeVocabulary.length - 1) {
                 currentFlashcardIndex++;
                 updateFlashcard();
-                document.getElementById('flashcard').classList.remove('flipped');
             }
         };
 
@@ -398,7 +440,6 @@
             if (currentFlashcardIndex > 0) {
                 currentFlashcardIndex--;
                 updateFlashcard();
-                document.getElementById('flashcard').classList.remove('flipped');
             }
         };
 
@@ -491,12 +532,16 @@
                         const existingDraggable = zone.querySelector('.draggable');
                         if (existingDraggable) {
                             document.getElementById('mapudungun-list').appendChild(existingDraggable);
+                            existingDraggable.classList.remove('draggable-matched');
                         }
                         
                         // Añadir el nuevo elemento
                         zone.appendChild(draggedElement);
                         draggedElement.classList.add('draggable-matched');
                         draggedElement = null;
+                        
+                        // Limpiar estilos de corrección después de mover
+                        zone.classList.remove('bg-green-100', 'border-green-500', 'bg-red-100', 'border-red-500', 'border-solid');
                     }
                 });
             });
@@ -506,9 +551,11 @@
             mapuList.addEventListener('dragover', e => e.preventDefault());
             mapuList.addEventListener('drop', e => {
                 e.preventDefault();
-                if (draggedElement) {
+                const targetZone = e.target.closest('.dropzone');
+                if (draggedElement && !targetZone) { // Solo soltar en la lista si no es una dropzone
                     mapuList.appendChild(draggedElement);
                     draggedElement.classList.remove('draggable-matched');
+                    draggedElement = null;
                 }
             });
         };
@@ -522,7 +569,7 @@
                 const droppedElement = zone.querySelector('.draggable');
                 
                 // Limpiar estilos previos
-                zone.classList.remove('bg-green-100', 'border-green-500', 'bg-red-100', 'border-red-500');
+                zone.classList.remove('bg-green-100', 'border-green-500', 'bg-red-100', 'border-red-500', 'border-solid');
 
                 if (droppedElement) {
                     const mapudungunWord = droppedElement.dataset.mapudungun;
@@ -542,7 +589,7 @@
             });
 
             if (correctCount === dropzones.length) {
-                showMessage('¡Pewkayal! ¡Todas las respuestas son correctas!', 'success');
+                showMessage('¡Pewkayal! ¡Todas las respuestas son correctas! Cargando nuevo set...', 'success');
                 // Recargar el juego
                 setTimeout(renderEmparejamientoModule, 3000);
             } else {
@@ -638,6 +685,10 @@
             const selectedOption = e.target.textContent.trim();
             const correctOption = question.spanish;
             const buttons = document.querySelectorAll('.quiz-option');
+            
+            // Si ya se ha respondido, no hacer nada (previene doble clic)
+            if (buttons[0].disabled) return; 
+
             questionsAnswered++;
 
             buttons.forEach(button => {
@@ -698,6 +749,7 @@
 
             // 3. Poblar la lista de frases complejas
             const complexQuizList = document.getElementById('complexQuizList');
+            const complexQuizContainer = document.getElementById('modalContentList').querySelector('div:nth-child(2)');
             if (complexQuiz.length > 0) {
                 complexQuizList.innerHTML = complexQuiz.map(item => `
                     <li class="p-2 border-b border-gray-200">
@@ -705,13 +757,38 @@
                         <p class="text-sm italic text-gray-500">- ${item.spanish}</p>
                     </li>
                 `).join('');
-                document.getElementById('modalContentList').querySelector('div:last-child').classList.remove('hidden');
+                complexQuizContainer.classList.remove('hidden');
             } else {
-                 document.getElementById('modalContentList').querySelector('div:last-child').classList.add('hidden');
+                 complexQuizContainer.classList.add('hidden');
             }
+            
+            // 4. Poblar la tabla de pronombres
+            const pronounTableContainer = document.getElementById('pronounTableContainer');
+            pronounTableContainer.innerHTML = `
+                <table class="w-full text-left border-collapse table-auto">
+                    <thead>
+                        <tr class="bg-green-50 text-green-700">
+                            <th class="p-3 border">Persona</th>
+                            <th class="p-3 border">Singular</th>
+                            <th class="p-3 border">Dual</th>
+                            <th class="p-3 border">Plural</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${PRONOUNS.map(p => `
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-3 border font-semibold">${p.person}</td>
+                                <td class="p-3 border">${p.singular}</td>
+                                <td class="p-3 border">${p.dual}</td>
+                                <td class="p-3 border">${p.plural}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
 
 
-            // 4. Mostrar el modal
+            // 5. Mostrar el modal
             vocabularyModal.classList.remove('hidden');
             setTimeout(() => {
                 vocabularyModal.classList.remove('opacity-0');
